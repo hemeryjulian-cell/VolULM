@@ -582,6 +582,18 @@
     font-size:9px; color:#2b2b2b;
     touch-action:none;
   }
+  .nav-box-visibility-toggle{
+    position:absolute; left:-7px; top:-7px;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--gris); border:2px solid var(--blanc);
+    box-shadow:var(--ombre);
+    cursor:pointer; z-index:3;
+    display:flex; align-items:center; justify-content:center;
+    font-size:9px; color:#fff;
+    touch-action:none;
+  }
+  .nav-box-visibility-toggle.is-hidden{ background:var(--rouge); }
+  .nav-edit-mode .nav-box.nav-box-hidden-flag{ opacity:0.35; }
   #nav-edit-banner{
     display:none;
     position:absolute;
@@ -661,7 +673,8 @@
     </div>
 
     <div id="nav-edit-banner">
-      <span>🧩 Mode réorganisation : glisse un bloc pour le déplacer, tire son coin bleu pour le redimensionner.</span>
+      <span>🧩 Mode réorganisation : glisse un bloc pour le déplacer, tire son coin bleu pour le redimensionner, appuie sur le rond gris (haut-gauche) pour le masquer/afficher.</span>
+      <button type="button" class="btn secondaire small" id="nav-edit-showall">👁 Tout afficher</button>
       <button type="button" class="btn secondaire small" id="nav-edit-reset">↺ Réinitialiser</button>
       <button type="button" class="btn small" id="nav-edit-done">✓ Terminer</button>
     </div>
@@ -1304,47 +1317,156 @@
     volEnCours: { arme:false, enCours:false, debutMs:null, carburantEmbarque:null },
     directTo: null,
     navLayout: {},
+    navHidden: {},
     carnet: [],
     checklists: {
-      "Avant vol (visite prévol)": [
-        {t:"Documents de bord présents (carte d'identification, manuel de vol)", d:false},
-        {t:"Niveau carburant vérifié visuellement", d:false},
-        {t:"Niveau huile vérifié", d:false},
-        {t:"Structure, ailes, gouvernes: état visuel", d:false},
-        {t:"Hélice: état, jeu, fixation", d:false},
-        {t:"Train d'atterrissage et pneus", d:false},
-        {t:"Purge du carburant (eau/impuretés)", d:false},
-        {t:"Sangles/harnais en bon état", d:false}
+      "Visite prévol": [
+        {t:"Frein de parc — SERRE et efficacité vérifiée", d:false},
+        {t:"Inspection générale intérieure — EFFECTUEE", d:false},
+        {t:"Ignition — OFF", d:false},
+        {t:"Autonomie — > 30 litres et NOTEE", d:false},
+        {t:"Robinet d'essence — OUVERT", d:false},
+        {t:"Débattement des gouvernes et sens — VERIFIE", d:false},
+        {t:"Goupille parachute et cache Pitot — RETIRES", d:false},
+        {t:"Volets — RENTRES", d:false},
+        {t:"Inspection générale extérieure — EFFECTUEE", d:false},
+        {t:"Niveau d'huile (après avoir brassé l'hélice) — VERIFIE", d:false}
       ],
       "Mise en route": [
-        {t:"Siège et harnais réglés", d:false},
-        {t:"Commandes: essai de débattement libre", d:false},
-        {t:"Contacts/masse coupés avant hélice", d:false},
-        {t:"Zone dégagée, \"cric\" annoncé", d:false},
-        {t:"Paramètres moteur au ralenti dans les normes", d:false},
-        {t:"Instruments et radio testés", d:false}
+        {t:"Volets — RENTRES", d:false},
+        {t:"Frein de parc — SERRE", d:false},
+        {t:"Contact batterie (clef) — ON", d:false},
+        {t:"Radio — ON", d:false},
+        {t:"ATIS (Magenta 126.600) — ECOUTE et NOTE", d:false},
+        {t:"TOUR (Magenta 124.300) — Demande de mise en route", d:false},
+        {t:"Radio / Transpondeur / GPS — OFF", d:false},
+        {t:"Ceintures — ATTACHEES (brin à l'intérieur)", d:false},
+        {t:"Portes — FERMEES", d:false},
+        {t:"Pompe essence et robinet essence — ON", d:false},
+        {t:"Starter — POUSSE (seulement à froid)", d:false},
+        {t:"Manette des gaz — PLEIN REDUIT", d:false},
+        {t:"Anticollision — ON", d:false},
+        {t:"Ignition — ON", d:false},
+        {t:"Manche — ARRIERE", d:false},
+        {t:"Sécurité extérieure — VERIFIEE", d:false},
+        {t:"Démarreur — ON (5 secondes max)", d:false},
+        {t:"Pression d'huile — ENTRE 2 et 6 bars", d:false},
+        {t:"Régime moteur — 2200 tr/min", d:false},
+        {t:"Starter — OFF", d:false},
+        {t:"Pompe essence électrique — OFF", d:false},
+        {t:"Radio / Intercom / Transpondeur — ON ou STBY", d:false},
+        {t:"Heure bloc départ — NOTEE", d:false}
       ],
-      "Avant décollage": [
-        {t:"Essais moteur (magnétos, richesse)", d:false},
-        {t:"Volets/aérofreins en position décollage", d:false},
-        {t:"Trim réglé", d:false},
-        {t:"Piste/axe dégagés, trafic vérifié", d:false},
-        {t:"Compte-tours et températures dans le vert", d:false}
+      "Roulage": [
+        {t:"Radio (Magenta Tour 124.300) — Demande de roulage", d:false},
+        {t:"Régime max — 2200 tr/min", d:false},
+        {t:"Essai frein — Effectué 2X", d:false},
+        {t:"Roulage à la vitesse d'un homme au pas, main sur le frein", d:false}
       ],
-      "Avant atterrissage": [
-        {t:"Circuit de piste et trafic identifiés", d:false},
-        {t:"Vitesse d'approche stabilisée", d:false},
-        {t:"Volets sortis selon procédure", d:false},
-        {t:"Piste dégagée confirmée", d:false}
+      "Point d'arrêt piste (PARA-ACHEVER)": [
+        {t:"Parachute — Dégoupillé", d:false},
+        {t:"A — Ceintures attachées / Portes fermées (pas de sangles ni fils de casque dans les portes) / Cabine claire (le CDB contrôle aussi son propre emport)", d:false},
+        {t:"C — Commandes du manche (à piquer, à cabrer, gauchissements D/G) / Commande des volets / Trim sur neutre, crans et voyants", d:false},
+        {t:"H — Pas de bruit ni vibrations d'hélice / pas de bruit moteur anormal / Starter repoussé", d:false},
+        {t:"H (suite) — Contrôle magnétos à 3500 tr/min : essai 1 et 2 (tolérance -250 tr à la coupure)", d:false},
+        {t:"E — Essence ouverte / Autonomie contrôlée (jauge électrique)", d:false},
+        {t:"V — Vérifications : prise Pilot dégagée / Altimètre au QNH ou QFE / Instruments de vol (bille - vario - alti - badin)", d:false},
+        {t:"V (suite) — Instruments moteur (T° huile - CHT - pression huile) / Circuit de charge fonctionnel", d:false},
+        {t:"E — Environnement piste / trafic en cours : roulage et approche", d:false},
+        {t:"R — Radio/Intercom sur ON, liaison interne OK, liaison ext OK / Transpondeur sur ALT ou ACS / GPS allumé", d:false}
       ],
-      "Après vol": [
-        {t:"Contacts coupés, parking frein serré", d:false},
-        {t:"Amarrage / cales mises en place", d:false},
-        {t:"Carnet de route renseigné", d:false},
-        {t:"Anomalies constatées reportées", d:false}
+      "Alignement piste (avant décollage)": [
+        {t:"Cercle de sécurité — effectué", d:false},
+        {t:"Starter — REPOUSSE", d:false},
+        {t:"Pompe à essence — sur ON", d:false},
+        {t:"Transpondeur — sur ACS", d:false},
+        {t:"Phare d'atterrissage/décollage — sur ON", d:false},
+        {t:"Essence — OUVERTE", d:false},
+        {t:"Trim — sur NEUTRE", d:false},
+        {t:"1 cran de volet — vérifié avec témoin, 110 km/h", d:false}
+      ],
+      "Décollage (volets 1 cran)": [
+        {t:"Freins — RELACHES", d:false},
+        {t:"Gaz — PLEIN POUSSE LENTEMENT", d:false},
+        {t:"Manche — NEUTRE", d:false},
+        {t:"Badin — \"DECOLLE\"", d:false},
+        {t:"Plein gaz et lâché : contrôle tours moteur 5300 mini", d:false},
+        {t:"Tenue de l'axe — badin / piste", d:false},
+        {t:"Rotation — 85 km/h", d:false},
+        {t:"Palier de prise de vitesse — MAX 110 km/h", d:false},
+        {t:"Montée — 110 km/h max", d:false},
+        {t:"A 300 pieds : pompe à essence / phare — OFF", d:false},
+        {t:"Volets — RENTRES", d:false},
+        {t:"Vitesse de montée — 120-130 km/h", d:false},
+        {t:"Paramètres moteur (pression et températures) — VERIFIES", d:false}
+      ],
+      "Préparation atterrissage": [
+        {t:"Pompe électrique — ON", d:false},
+        {t:"Régime moteur en palier — 3200 tr/min", d:false},
+        {t:"Volets (lorsque vitesse < 115 km/h) — 1 CRAN", d:false},
+        {t:"Régime moteur — 3500 tr/min pour maintenir le palier", d:false},
+        {t:"Vitesse — 110 km/h", d:false},
+        {t:"Radio — MESSAGE", d:false}
+      ],
+      "Descente / Atterrissage": [
+        {t:"Régime moteur — MINIMUM 2000 tr/min", d:false},
+        {t:"Vitesse d'approche — 100-110 km/h avec 1 cran, 85-95 km/h avec 2 crans", d:false},
+        {t:"Toucher des roues, gaz réduits — 80 km/h", d:false},
+        {t:"Freins — AVEC PRUDENCE", d:false}
+      ],
+      "Après atterrissage": [
+        {t:"Pompe essence — OFF", d:false},
+        {t:"Volets — RENTRES", d:false}
+      ],
+      "Arrêt moteur": [
+        {t:"Frein de parking — SERRE", d:false},
+        {t:"Radio / Intercom / Transpondeur / GPS — OFF", d:false},
+        {t:"Ignition — OFF", d:false},
+        {t:"Anticollision et feu d'atterrissage — OFF", d:false},
+        {t:"Batterie — OFF, clé enlevée et posée sur le tableau de bord", d:false}
+      ],
+      "Consignation de l'aéronef": [
+        {t:"Heure bloc arrivée — NOTEE", d:false},
+        {t:"Goupilles parachute / cache Pitot — EN PLACE", d:false}
+      ],
+      "Urgence : Feu moteur": [
+        {t:"Robinet d'essence — FERME", d:false},
+        {t:"Plein gaz jusqu'à extinction du moteur", d:false},
+        {t:"Ignition — OFF", d:false},
+        {t:"Radio — MAYDAY", d:false},
+        {t:"Contact batterie — OFF", d:false}
+      ],
+      "Urgence : Parachute de secours (BRS)": [
+        {t:"1. Réduire la puissance (si possible)", d:false},
+        {t:"2. Couper le contact moteur (magnétos/allumage sur OFF) — réduit le risque d'incendie lors de l'impact", d:false},
+        {t:"3. Couper le coupe-circuit général (batterie sur OFF)", d:false},
+        {t:"4. Serrer les harnais au maximum", d:false},
+        {t:"5. Ouvrir (ou déverrouiller) la porte — crucial pour éviter le blocage du cadre en cas de déformation de la cellule", d:false},
+        {t:"6. Saisir la poignée d'activation fermement", d:false},
+        {t:"7. Tirer franchement (mouvement sec et continu)", d:false},
+        {t:"8. Adopter la position de protection (bras croisés sur la poitrine)", d:false},
+        {t:"Briefing passager : montrer la poignée, rappeler de ne jamais y toucher, expliquer que c'est l'ultime recours", d:false}
+      ],
+      "Paramètres à retenir (référence, masse maxi)": [
+        {t:"Masse maxi au décollage — 472,5 kg", d:false},
+        {t:"Masse à vide — 283 kg", d:false},
+        {t:"Masse maxi bagages — 10 kg", d:false},
+        {t:"Finesse max avec 1 cran de volet (110 km/h) — 14", d:false},
+        {t:"VNE (vitesse à ne pas dépasser) — 230 km/h", d:false},
+        {t:"VSO (vitesse mini volets sortis) — 70 km/h", d:false},
+        {t:"VFE (vitesse max volets sortis) 1 cran / 2 crans — 110 km/h / 95 km/h", d:false},
+        {t:"VNO (vitesse max en atmosphère turbulente) — 179 km/h", d:false},
+        {t:"Vitesse de manœuvre — 151 km/h", d:false},
+        {t:"Vitesse de meilleur taux de montée — 95 km/h", d:false},
+        {t:"Vent traversier max — 15 kt", d:false},
+        {t:"Distance de roulement / décollage — 120 m / 220 m", d:false},
+        {t:"Distance d'atterrissage — 150 m", d:false},
+        {t:"Capacité réservoir — 2 x 35 litres", d:false},
+        {t:"Consommation horaire moyenne — 12 litres", d:false}
       ]
     },
-    checklistActive: "Avant vol (visite prévol)"
+    checklistActive: "Visite prévol",
+    checklistsVersion: 2
   };
 
   function loadData(){
@@ -1353,7 +1475,17 @@
       if(!raw) return JSON.parse(JSON.stringify(defaultData));
       const parsed = JSON.parse(raw);
       // fusion défensive pour compat futures
-      return Object.assign(JSON.parse(JSON.stringify(defaultData)), parsed);
+      const merged = Object.assign(JSON.parse(JSON.stringify(defaultData)), parsed);
+      // Migration : remplace les checklists génériques d'origine par la checklist officielle FK9 SW
+      // (une seule fois, pour ne jamais écraser des modifications faites depuis).
+      // On teste la valeur brute sauvegardée (parsed), car la fusion avec defaultData
+      // masquerait l'absence de version (defaultData fournit déjà checklistsVersion:2).
+      if(!(parsed.checklistsVersion >= 2)){
+        merged.checklists = JSON.parse(JSON.stringify(defaultData.checklists));
+        merged.checklistActive = defaultData.checklistActive;
+        merged.checklistsVersion = 2;
+      }
+      return merged;
     }catch(e){
       console.warn("Lecture des données impossible, réinitialisation.", e);
       return JSON.parse(JSON.stringify(defaultData));
@@ -2236,24 +2368,62 @@ ${points}
       navBoxApplyRect(el, l.x, l.y, l.w, l.h);
       el.classList.add("nav-box-custom");
     });
+    applyNavHiddenState();
+  }
+
+  function applyNavHiddenState(){
+    NAV_DRAG_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(data.navHidden[id]){
+        el.style.display = "none";
+      }
+    });
   }
 
   function navBoxAddGrip(el){
-    if(el.querySelector(".nav-box-resize-grip")) return;
-    const grip = document.createElement("span");
-    grip.className = "nav-box-resize-grip";
-    grip.textContent = "⤡";
-    grip.addEventListener("pointerdown", onNavResizeStart);
-    el.appendChild(grip);
+    if(!el.querySelector(".nav-box-resize-grip")){
+      const grip = document.createElement("span");
+      grip.className = "nav-box-resize-grip";
+      grip.textContent = "⤡";
+      grip.addEventListener("pointerdown", onNavResizeStart);
+      el.appendChild(grip);
+    }
+    if(!el.querySelector(".nav-box-visibility-toggle")){
+      const vis = document.createElement("span");
+      const hidden = !!data.navHidden[el.id];
+      vis.className = "nav-box-visibility-toggle" + (hidden ? " is-hidden" : "");
+      vis.textContent = hidden ? "🚫" : "👁";
+      vis.title = hidden ? "Réafficher ce bloc" : "Masquer ce bloc";
+      vis.addEventListener("pointerdown", (ev) => { ev.preventDefault(); ev.stopPropagation(); });
+      vis.addEventListener("click", onNavVisibilityToggle);
+      el.appendChild(vis);
+      el.classList.toggle("nav-box-hidden-flag", hidden);
+    }
   }
 
   function navBoxRemoveGrips(){
     document.querySelectorAll(".nav-box-resize-grip").forEach(g => g.remove());
+    document.querySelectorAll(".nav-box-visibility-toggle").forEach(g => g.remove());
+  }
+
+  function onNavVisibilityToggle(e){
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget.closest(".nav-box");
+    if(!el) return;
+    const nowHidden = !data.navHidden[el.id];
+    data.navHidden[el.id] = nowHidden;
+    el.classList.toggle("nav-box-hidden-flag", nowHidden);
+    e.currentTarget.classList.toggle("is-hidden", nowHidden);
+    e.currentTarget.textContent = nowHidden ? "🚫" : "👁";
+    e.currentTarget.title = nowHidden ? "Réafficher ce bloc" : "Masquer ce bloc";
+    save();
   }
 
   function onNavDragStart(e){
     if(!navEditMode) return;
-    if(e.target.closest(".nav-box-resize-grip")) return;
+    if(e.target.closest(".nav-box-resize-grip") || e.target.closest(".nav-box-visibility-toggle")) return;
     const el = e.currentTarget;
     e.preventDefault();
     e.stopPropagation();
@@ -2324,6 +2494,11 @@ ${points}
     navPanelEl.classList.add("nav-edit-mode");
     document.getElementById("nav-edit-toggle").classList.add("active");
     document.getElementById("nav-edit-banner").classList.add("open");
+    // Passe 0 : on révèle temporairement les blocs masqués pour pouvoir les repositionner/réafficher.
+    NAV_DRAG_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if(el && el.style.display === "none") el.style.display = "";
+    });
     // Passe 1 : on capture la position actuelle de TOUS les blocs avant d'en modifier
     // le positionnement — sinon fixer le 1er bloc en "position:fixed" le sort du flux
     // flex et fait glisser les suivants, faussant leurs coordonnées capturées ensuite.
@@ -2363,6 +2538,8 @@ ${points}
         el.style.margin = ""; el.style.zIndex = "";
         el.classList.remove("nav-box-temp-fixed");
       }
+      el.classList.remove("nav-box-hidden-flag");
+      el.style.display = data.navHidden[id] ? "none" : "";
     });
     save();
   }
@@ -2400,6 +2577,21 @@ ${points}
   });
   document.getElementById("nav-edit-done").addEventListener("click", navEditModeExit);
   document.getElementById("nav-edit-reset").addEventListener("click", navLayoutReset);
+  document.getElementById("nav-edit-showall").addEventListener("click", () => {
+    data.navHidden = {};
+    NAV_DRAG_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.classList.remove("nav-box-hidden-flag");
+      const vis = el.querySelector(".nav-box-visibility-toggle");
+      if(vis){
+        vis.classList.remove("is-hidden");
+        vis.textContent = "👁";
+        vis.title = "Masquer ce bloc";
+      }
+    });
+    save();
+  });
   window.addEventListener("resize", () => {
     // Recale les blocs personnalisés si la fenêtre change de taille (ex: rotation d'écran)
     NAV_DRAG_IDS.forEach(id => {
@@ -2413,9 +2605,10 @@ ${points}
     });
   });
 
-  // Empêche les clics des boutons (GO, mode carte, etc.) de se déclencher pendant qu'on les déplace/redimensionne
+  // Empêche les clics des boutons (GO, mode carte, etc.) de se déclencher pendant qu'on les déplace/redimensionne,
+  // sans bloquer le petit bouton "masquer/afficher" lui-même.
   document.addEventListener("click", function(e){
-    if(navEditMode && e.target && e.target.closest && e.target.closest(".nav-box")){
+    if(navEditMode && e.target && e.target.closest && e.target.closest(".nav-box") && !e.target.closest(".nav-box-visibility-toggle")){
       e.stopPropagation();
       e.preventDefault();
     }
