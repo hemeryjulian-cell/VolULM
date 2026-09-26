@@ -827,6 +827,7 @@
               <th>Coord.</th>
               <th>Route (°Tv)</th>
               <th>Vent branche</th>
+              <th>Travers (kt)</th>
               <th>Cap avion (°Tv)</th>
               <th>Cap Cx (°)</th>
               <th id="th-vsol">V/sol (kt)</th>
@@ -855,8 +856,12 @@
         <div class="stat"><div class="val" id="nav-carbu-tot">0</div><div class="lbl">Carburant (L)</div></div>
         <div class="stat"><div class="val" id="nav-autonomie">—</div><div class="lbl">Marge autonomie</div></div>
         <div class="stat"><div class="val" id="nav-eta-dest">—</div><div class="lbl">ETA destination</div></div>
+        <div class="stat"><div class="val" id="nav-coucher-soleil">—</div><div class="lbl">Coucher du soleil (Nouméa)</div></div>
+        <div class="stat"><div class="val" id="nav-crepuscule-civil">—</div><div class="lbl">Fin crépuscule civil</div></div>
       </div>
       <div id="nav-vent-warning"></div>
+      <div id="nav-soleil-warning"></div>
+      <p class="muted">Heures de lever/coucher de soleil calculées pour Nouméa (calcul astronomique informatif, à ± quelques minutes) — vérifie les minima légaux VFR de nuit dans ta documentation officielle avant de te fier à ces heures pour ta planification.</p>
       <div class="btn-row">
         <button class="btn" id="nav-save">💾 Enregistrer ce plan</button>
         <button class="btn secondaire" id="nav-new">🆕 Nouveau plan</button>
@@ -934,7 +939,9 @@
       </div>
       <div class="btn-row">
         <button class="btn" id="cv-add">+ Ajouter au carnet</button>
+        <button class="btn secondaire small" id="cv-fill-from-trace">🛰️ Pré-remplir depuis la trace GPS</button>
       </div>
+      <p class="muted" id="cv-trace-hint"></p>
     </div>
 
     <div class="card">
@@ -1025,6 +1032,53 @@
         <div class="cg-point" id="mc-point"></div>
       </div>
       <p class="muted" id="mc-envelope-legend">Renseigne les limites de masse et de centrage dans l'onglet « Appareil » pour afficher le domaine de vol.</p>
+    </div>
+
+    <div class="card">
+      <h2>🛫 Distance de piste estimée (décollage / atterrissage)</h2>
+      <p class="muted">
+        Estimation approximative à partir des distances de référence du manuel de vol (onglet « Appareil »),
+        corrigées par des règles empiriques génériques (altitude densité, vent, masse du jour).
+        <strong>Ce n'est pas un abaque certifié</strong> : vérifie toujours avec le manuel de vol officiel de
+        l'appareil avant toute décision opérationnelle, en particulier sur piste courte ou par forte chaleur.
+      </p>
+      <div class="grid">
+        <div class="field">
+          <label>Altitude du terrain (ft)</label>
+          <input id="mc-perf-alt" type="number" step="1" value="0">
+        </div>
+        <div class="field">
+          <label>QNH (hPa)</label>
+          <input id="mc-perf-qnh" type="number" step="1" value="1013">
+        </div>
+        <div class="field">
+          <label>Température extérieure (°C)</label>
+          <input id="mc-perf-temp" type="number" step="1" value="20">
+        </div>
+        <div class="field">
+          <label>QFU piste (° — sens du décollage/atterrissage)</label>
+          <input id="mc-perf-qfu" type="number" min="0" max="360" step="1" value="0">
+        </div>
+        <div class="field">
+          <label>Vent (direction °, d'où il vient)</label>
+          <input id="mc-perf-vent-dir" type="number" min="0" max="360" step="1" value="0">
+        </div>
+        <div class="field">
+          <label>Vent (vitesse kt)</label>
+          <input id="mc-perf-vent-vit" type="number" min="0" step="1" value="0">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="mc-perf-calc">Estimer les distances</button>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="val" id="mc-perf-alt-densite">—</div><div class="lbl">Altitude densité (ft)</div></div>
+        <div class="stat"><div class="val" id="mc-perf-vent-comp">—</div><div class="lbl">Vent effectif piste (kt)</div></div>
+        <div class="stat"><div class="val" id="mc-perf-deco">—</div><div class="lbl">Décollage estimé (m)</div></div>
+        <div class="stat"><div class="val" id="mc-perf-att">—</div><div class="lbl">Atterrissage estimé (m)</div></div>
+      </div>
+      <div id="mc-perf-warning"></div>
+      <p class="muted" id="mc-perf-note"></p>
     </div>
   </section>
 
@@ -1121,6 +1175,10 @@
           <label>Réserve réglementaire (min)</label>
           <input id="ap-reserve" type="number" min="0" value="30">
         </div>
+        <div class="field">
+          <label>Vent traversier max (kt)</label>
+          <input id="ap-vent-travers-max" type="number" min="0" placeholder="ex. 15">
+        </div>
       </div>
 
       <h3>Masse &amp; centrage — appareil</h3>
@@ -1144,6 +1202,19 @@
         <div class="field">
           <label>Centrage arrière limite (m)</label>
           <input id="ap-cg-max" type="number" step="0.01" placeholder="ex. 0.40">
+        </div>
+      </div>
+
+      <h3>Distances de référence (issues du manuel de vol)</h3>
+      <p class="muted">Distances à MTOW, niveau de la mer, atmosphère standard (ISA), sans vent, piste dure — telles qu'indiquées dans le manuel de vol officiel de l'appareil. Elles servent de base au calculateur de distance de piste estimée (onglet Masse &amp; centrage).</p>
+      <div class="grid">
+        <div class="field">
+          <label>Distance de décollage réf. (m)</label>
+          <input id="ap-dist-deco-ref" type="number" min="0" placeholder="ex. 150 (voir manuel de vol)">
+        </div>
+        <div class="field">
+          <label>Distance d'atterrissage réf. (m)</label>
+          <input id="ap-dist-att-ref" type="number" min="0" placeholder="ex. 130 (voir manuel de vol)">
         </div>
       </div>
 
@@ -1353,13 +1424,18 @@
   document.getElementById("dark-toggle").addEventListener("click", toggleDarkMode);
 
   function triangleVent(track, tas, windDir, windSpeed){
-    if(tas <= 0) return { gs:0, heading:track, warning:false };
-    if(!windSpeed) return { gs:tas, heading:track, warning:false };
+    if(tas <= 0) return { gs:0, heading:track, warning:false, crosswind:0, crosswindSide:null };
+    if(!windSpeed) return { gs:tas, heading:track, warning:false, crosswind:0, crosswindSide:null };
     const windToDir = (windDir + 180) % 360; // direction vers laquelle l'air se déplace
     const wn = windSpeed * Math.cos(toRad(windToDir));
     const we = windSpeed * Math.sin(toRad(windToDir));
     const k = wn*Math.cos(toRad(track)) + we*Math.sin(toRad(track)); // composante vent de face/arrière
+    // composante travers (signée) : projection de la vitesse de l'air sur l'axe perpendiculaire
+    // à droite de la route ; un vent qui pousse vers la droite vient de la gauche, et inversement.
+    const crossSigned = we*Math.cos(toRad(track)) - wn*Math.sin(toRad(track));
     const crossSq = Math.max(0, windSpeed*windSpeed - k*k);
+    const crosswind = Math.sqrt(crossSq);
+    const crosswindSide = crosswind < 0.05 ? null : (crossSigned >= 0 ? "gauche" : "droite");
     const underRoot = tas*tas - crossSq;
     let warning = false, gs;
     if(underRoot < 0){ warning = true; gs = Math.max(k, 1); }
@@ -1367,7 +1443,7 @@
     const an = gs*Math.cos(toRad(track)) - wn;
     const ae = gs*Math.sin(toRad(track)) - we;
     const heading = (toDeg(Math.atan2(ae, an)) + 360) % 360;
-    return { gs, heading, warning };
+    return { gs, heading, warning, crosswind, crosswindSide };
   }
   // Calcule pour chaque point du plan : route, vent appliqué, cap avion, vitesse-sol,
   // temps de branche, temps cumulé, ETA et carburant cumulé.
@@ -1384,13 +1460,17 @@
       const dist = num(p.dist);
       const wd = (p.ventDir !== undefined && p.ventDir !== "" && p.ventDir !== null) ? num(p.ventDir) : num(data.navCourant.ventDir);
       const ws = (p.ventVit !== undefined && p.ventVit !== "" && p.ventVit !== null) ? num(p.ventVit) : num(data.navCourant.ventVit);
-      let leg = { track, dist, wd, ws, gs:null, heading:null, headingCompas:null, timeMin:0, cumMin, etaMin: depMin, warning:false, fuel: conso>0 ? (cumMin/60)*conso : null };
+      const traversMax = num(data.appareil.ventTraversierMax) || 15;
+      let leg = { track, dist, wd, ws, gs:null, heading:null, headingCompas:null, timeMin:0, cumMin, etaMin: depMin, warning:false, crosswind:0, crosswindSide:null, crosswindWarning:false, fuel: conso>0 ? (cumMin/60)*conso : null };
       if(i > 0){
         const r = triangleVent(track, tas, wd, ws);
         leg.gs = r.gs;
         leg.heading = r.heading;
         leg.headingCompas = decl !== null ? Math.round((((r.heading - decl) % 360) + 360) % 360) : null;
         leg.warning = r.warning;
+        leg.crosswind = r.crosswind;
+        leg.crosswindSide = r.crosswindSide;
+        leg.crosswindWarning = r.crosswind > traversMax;
         leg.timeMin = (r.gs > 0) ? (dist / r.gs) * 60 : 0;
         cumMin += leg.timeMin;
         leg.cumMin = cumMin;
@@ -1408,11 +1488,77 @@
       "&pressure=&type=map&location=coordinates&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1";
   }
 
+  /* ---------- Lever / coucher du soleil (calcul astronomique approché) ----------
+     Coordonnées par défaut : Nouméa, Nouvelle-Calédonie. La Nouvelle-Calédonie est à
+     UTC+11 toute l'année (pas d'heure d'été). Ceci est un calcul informatif basé sur
+     une formule astronomique standard (précision de l'ordre de la minute) : ce n'est
+     pas une source réglementaire. Vérifie toujours les minima légaux VFR de nuit
+     (crépuscule aéronautique civil, etc.) dans la documentation officielle avant de
+     baser une décision de vol dessus. */
+  const NOUMEA_LAT = -22.2758, NOUMEA_LON = 166.4580, NC_UTC_OFFSET_H = 11;
+  function julianDayFromYMD(y, m, d){
+    const a = Math.floor((14 - m) / 12);
+    const y2 = y + 4800 - a;
+    const m2 = m + 12*a - 3;
+    return d + Math.floor((153*m2 + 2)/5) + 365*y2 + Math.floor(y2/4) - Math.floor(y2/100) + Math.floor(y2/400) - 32045;
+  }
+  // Renvoie {sunriseMin, sunsetMin, civilDawnMin, civilDuskMin} en minutes depuis minuit,
+  // heure locale (UTC+11), pour la date "YYYY-MM-DD" donnée et les coordonnées lat/lon (degrés).
+  // Renvoie null si la date est invalide, ou des valeurs null pour un événement qui ne se
+  // produit pas ce jour-là (nuit ou jour polaire — n'arrive pas en pratique en Nouvelle-Calédonie).
+  function sunEvents(dateStr, lat, lon){
+    if(!dateStr) return null;
+    const m = String(dateStr).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!m) return null;
+    const y = +m[1], mo = +m[2], d = +m[3];
+    const JDN = julianDayFromYMD(y, mo, d);
+    const lw = -lon; // convention "longitude ouest" de l'équation du lever de soleil
+    const nStar = JDN - 2451545.0009 - lw/360;
+    const n = Math.round(nStar);
+    const Jtransit0 = 2451545.0009 + lw/360 + n;
+    const Mdeg = ((357.5291 + 0.98560028 * (Jtransit0 - 2451545.0)) % 360 + 360) % 360;
+    const Mrad = toRad(Mdeg);
+    const C = 1.9148*Math.sin(Mrad) + 0.0200*Math.sin(2*Mrad) + 0.0003*Math.sin(3*Mrad);
+    const lambdaDeg = ((Mdeg + 102.9372 + C + 180) % 360 + 360) % 360;
+    const lambdaRad = toRad(lambdaDeg);
+    const Jtransit = Jtransit0 + 0.0053*Math.sin(Mrad) - 0.0069*Math.sin(2*lambdaRad);
+    const sinDelta = Math.sin(lambdaRad) * Math.sin(toRad(23.4397));
+    const delta = Math.asin(sinDelta);
+    const latRad = toRad(lat);
+    function omega0For(h0Deg){
+      const h0 = toRad(h0Deg);
+      const cosOmega = (Math.sin(h0) - Math.sin(latRad)*Math.sin(delta)) / (Math.cos(latRad)*Math.cos(delta));
+      if(cosOmega > 1 || cosOmega < -1) return null;
+      return toDeg(Math.acos(cosOmega));
+    }
+    function jdToLocalMinutes(jd){
+      if(jd === null || jd === undefined) return null;
+      const ms = (jd - 2440587.5) * 86400000; // JD -> epoch Unix (ms), temps universel
+      const localMs = ms + NC_UTC_OFFSET_H * 3600000;
+      const localDate = new Date(localMs);
+      return localDate.getUTCHours()*60 + localDate.getUTCMinutes() + localDate.getUTCSeconds()/60;
+    }
+    const omegaStd = omega0For(-0.833); // lever/coucher officiel (réfraction standard)
+    const omegaCiv = omega0For(-6);     // crépuscule civil
+    return {
+      sunriseMin: omegaStd === null ? null : jdToLocalMinutes(Jtransit - omegaStd/360),
+      sunsetMin: omegaStd === null ? null : jdToLocalMinutes(Jtransit + omegaStd/360),
+      civilDawnMin: omegaCiv === null ? null : jdToLocalMinutes(Jtransit - omegaCiv/360),
+      civilDuskMin: omegaCiv === null ? null : jdToLocalMinutes(Jtransit + omegaCiv/360)
+    };
+  }
+  function todayDateStr(){
+    const n = new Date();
+    return n.getFullYear() + "-" + String(n.getMonth()+1).padStart(2,"0") + "-" + String(n.getDate()).padStart(2,"0");
+  }
+
   /* ---------- Stockage ---------- */
   const STORE_KEY = "ulm_app_data_v1";
   const defaultData = {
     appareil: {
       nom:"FK9 Mark IV SW", immat:"", vitesse:100, conso:15, capacite:65, reserve:30,
+      ventTraversierMax:15,
+      distDecoRef:0, distAttRef:0,
       masseVide:270, blVide:0, mtow:472.5, cgMin:0, cgMax:0,
       potentielDerniere:0, potentielIntervalle:0
     },
@@ -1667,8 +1813,9 @@
   /* ---------- Profil appareil ---------- */
   const apFields = {
     "ap-nom":"nom","ap-immat":"immat","ap-vitesse":"vitesse","ap-conso":"conso",
-    "ap-capacite":"capacite","ap-reserve":"reserve","ap-masse-vide":"masseVide",
+    "ap-capacite":"capacite","ap-reserve":"reserve","ap-vent-travers-max":"ventTraversierMax","ap-masse-vide":"masseVide",
     "ap-bl-vide":"blVide","ap-mtow":"mtow","ap-cg-min":"cgMin","ap-cg-max":"cgMax",
+    "ap-dist-deco-ref":"distDecoRef","ap-dist-att-ref":"distAttRef",
     "ap-potentiel-derniere":"potentielDerniere","ap-potentiel-intervalle":"potentielIntervalle"
   };
   function fillAppareilForm(){
@@ -1754,6 +1901,7 @@
           /
           <input type="number" data-idx="${idx}" data-f="ventVit" value="${p.ventVit ?? ""}" placeholder="${data.navCourant.ventVit||'kt'}" style="width:45px;display:inline-block;" title="Vitesse du vent (kt)">
         `}</td>
+        <td class="auto-val"${leg.crosswindWarning ? ' style="color:var(--rouge);font-weight:700;"' : ''}>${isFirst ? "—" : (Math.round(leg.crosswind) + (leg.crosswindSide ? " " + leg.crosswindSide.charAt(0).toUpperCase() : "") + (leg.crosswindWarning ? ' ⚠️' : ''))}</td>
         <td class="auto-val">${(isFirst || leg.heading===null) ? "—" : Math.round(leg.heading) + (leg.warning ? ' ⚠️' : '')}</td>
         <td class="auto-val">${leg.headingCompas===null ? "—" : leg.headingCompas}</td>
         <td class="auto-val">${(isFirst || leg.gs===null) ? "—" : Math.round(toDisplaySpeed(leg.gs))}</td>
@@ -2197,6 +2345,30 @@ ${points}
     toast("Trace exportée (" + liveTrack.length + " points)");
   }
   document.getElementById("trace-export").addEventListener("click", exportTrackGpx);
+
+  /* ---------- Pré-remplissage du carnet de vol à partir de la trace GPS enregistrée ---------- */
+  function fmtDureeHM(min){
+    min = Math.round(min);
+    const h = Math.floor(min/60), m = min%60;
+    return h + ":" + String(m).padStart(2,"0");
+  }
+  document.getElementById("cv-fill-from-trace").addEventListener("click", ()=>{
+    const hintEl = document.getElementById("cv-trace-hint");
+    if(liveTrack.length < 2){
+      hintEl.textContent = "Aucune trace exploitable — active le suivi GPS (🛩️ sur l'écran Navigation) pendant le vol pour l'enregistrer automatiquement.";
+      return;
+    }
+    const first = liveTrack[0], last = liveTrack[liveTrack.length-1];
+    const dureeMin = (last.ts - first.ts) / 60000;
+    let distNM = 0;
+    for(let i=1; i<liveTrack.length; i++){
+      distNM += distanceNM(liveTrack[i-1].lat, liveTrack[i-1].lon, liveTrack[i].lat, liveTrack[i].lon);
+    }
+    document.getElementById("cv-date").value = new Date(first.ts).toISOString().slice(0,10);
+    document.getElementById("cv-duree").value = fmtDureeHM(dureeMin);
+    if(!document.getElementById("cv-immat").value) document.getElementById("cv-immat").value = data.appareil.immat || "";
+    hintEl.textContent = "Champs date et durée pré-remplis depuis la trace GPS (" + liveTrack.length + " points, " + distNM.toFixed(1) + " NM parcourues). Complète départ/arrivée et le reste avant d'ajouter au carnet.";
+  });
 
   function onLiveError(err){
     toast("Position indisponible : " + (err && err.message ? err.message : "erreur GPS"));
@@ -3266,13 +3438,46 @@ ${points}
 
     const warnEl = document.getElementById("nav-vent-warning");
     const hasWarning = legs.some(l=>l.warning);
-    warnEl.innerHTML = hasWarning
+    const traversMax = num(data.appareil.ventTraversierMax) || 15;
+    const legsTravers = legs.filter(l=>l.crosswindWarning);
+    let warnHtml = hasWarning
       ? '<p><span class="badge warn">Vent trop fort</span> sur au moins une branche : le vent traversier/de face dépasse la vitesse de croisière, la route affichée ne peut pas être tenue telle quelle.</p>'
       : "";
+    if(legsTravers.length){
+      const branches = legsTravers.map(l=>{
+        const idx = legs.indexOf(l);
+        return "point " + (idx+1) + " (" + Math.round(l.crosswind) + " kt" + (l.crosswindSide ? " " + l.crosswindSide : "") + ")";
+      }).join(", ");
+      warnHtml += '<p><span class="badge warn">Vent traversier</span> dépasse la limite de l\'appareil (' + traversMax + ' kt) sur : ' + branches + '.</p>';
+    }
+    warnEl.innerHTML = warnHtml;
+
+    /* ---------- Lever / coucher du soleil (Nouméa) ---------- */
+    const dateVol = data.navCourant.date || todayDateStr();
+    const sun = sunEvents(dateVol, NOUMEA_LAT, NOUMEA_LON);
+    const coucherEl = document.getElementById("nav-coucher-soleil");
+    const crepEl = document.getElementById("nav-crepuscule-civil");
+    const soleilWarnEl = document.getElementById("nav-soleil-warning");
+    if(coucherEl) coucherEl.textContent = sun && sun.sunsetMin !== null ? fmtHeureFromMin(sun.sunsetMin) : "—";
+    if(crepEl) crepEl.textContent = sun && sun.civilDuskMin !== null ? fmtHeureFromMin(sun.civilDuskMin) : "—";
+    if(soleilWarnEl){
+      let msg = "";
+      if(sun && dernier && dernier.etaMin !== null && dernier.etaMin !== undefined){
+        if(sun.civilDuskMin !== null && dernier.etaMin > sun.civilDuskMin){
+          msg = '<p><span class="badge warn">Nuit</span> l\'ETA destination (' + fmtHeureFromMin(dernier.etaMin) + ') est postérieure à la fin du crépuscule civil (' + fmtHeureFromMin(sun.civilDuskMin) + ') : le vol se terminerait de nuit.</p>';
+        } else if(sun.sunsetMin !== null && dernier.etaMin > sun.sunsetMin){
+          msg = '<p><span class="badge warn">Coucher du soleil</span> l\'ETA destination (' + fmtHeureFromMin(dernier.etaMin) + ') est postérieure au coucher du soleil (' + fmtHeureFromMin(sun.sunsetMin) + ').</p>';
+        }
+      }
+      soleilWarnEl.innerHTML = msg;
+    }
   }
 
   document.getElementById("nav-nom").addEventListener("input", e=> data.navCourant.nom = e.target.value);
-  document.getElementById("nav-date").addEventListener("input", e=> data.navCourant.date = e.target.value);
+  document.getElementById("nav-date").addEventListener("input", e=>{
+    data.navCourant.date = e.target.value;
+    renderNavSummary();
+  });
   document.getElementById("nav-heure-depart").addEventListener("input", e=>{
     data.navCourant.heureDepart = e.target.value;
     renderNavTable();
@@ -3683,6 +3888,70 @@ ${points}
   }
 
   document.getElementById("mc-calc").addEventListener("click", calculerMasseCentrage);
+
+  /* ---------- Distance de piste estimée (décollage / atterrissage) ----------
+     Estimation approximative par règles empiriques génériques appliquées aux distances de
+     référence du manuel de vol (masse max, niveau mer, ISA, sans vent) : ce n'est PAS un
+     abaque certifié, seulement un outil indicatif — toujours vérifier avec le manuel de vol
+     officiel de l'appareil avant toute décision opérationnelle. */
+  function calculerPerfPiste(){
+    const ap = data.appareil;
+    const distDecoRef = num(ap.distDecoRef);
+    const distAttRef = num(ap.distAttRef);
+    const notEl = document.getElementById("mc-perf-note");
+    if(!distDecoRef && !distAttRef){
+      document.getElementById("mc-perf-alt-densite").textContent = "—";
+      document.getElementById("mc-perf-vent-comp").textContent = "—";
+      document.getElementById("mc-perf-deco").textContent = "—";
+      document.getElementById("mc-perf-att").textContent = "—";
+      document.getElementById("mc-perf-warning").innerHTML = "";
+      notEl.textContent = "Renseigne au moins une distance de référence (manuel de vol) dans l'onglet « Appareil » pour activer ce calcul.";
+      return;
+    }
+    const altFt = num(document.getElementById("mc-perf-alt").value);
+    const qnh = num(document.getElementById("mc-perf-qnh").value) || 1013;
+    const oat = num(document.getElementById("mc-perf-temp").value);
+    const qfu = num(document.getElementById("mc-perf-qfu").value);
+    const ventDir = num(document.getElementById("mc-perf-vent-dir").value);
+    const ventVit = num(document.getElementById("mc-perf-vent-vit").value);
+
+    // Altitude pression puis altitude densité (formules standard, approchées)
+    const altPression = altFt + (1013 - qnh) * 30;
+    const isaTemp = 15 - 2 * (altPression / 1000);
+    const altDensite = altPression + 120 * (oat - isaTemp);
+    document.getElementById("mc-perf-alt-densite").textContent = Math.round(altDensite);
+
+    // Composante de vent effective dans l'axe de piste (positif = vent de face)
+    const ventComp = ventVit * Math.cos(toRad(ventDir - qfu));
+    document.getElementById("mc-perf-vent-comp").textContent = (ventComp >= 0 ? "+" : "") + ventComp.toFixed(1) + (ventComp >= 0 ? " (face)" : " (arrière)");
+
+    // Masse du jour (reprise du devis de masse et centrage ci-dessus si déjà calculé)
+    const masseTot = num(document.getElementById("mc-masse-tot").textContent) || num(ap.mtow) || 0;
+    const mtow = num(ap.mtow) || masseTot || 1;
+    const masseFactor = mtow > 0 ? (masseTot / mtow) : 1;
+
+    // Facteurs correctifs empiriques génériques (règles du pouce, à affiner avec le manuel de vol) :
+    // +10 % de distance par 1000 ft d'altitude densité ; -1 %/kt de vent de face, +2 %/kt de vent arrière.
+    const facteurAlt = 1 + 0.10 * (altDensite / 1000);
+    const facteurVent = ventComp >= 0 ? Math.max(0.5, 1 - 0.01 * ventComp) : (1 + 0.02 * Math.abs(ventComp));
+    const facteurMasse = Math.max(0.5, masseFactor);
+
+    const factotal = facteurAlt * facteurVent * facteurMasse;
+    const deco = distDecoRef ? distDecoRef * factotal : null;
+    const att = distAttRef ? distAttRef * factotal : null;
+
+    document.getElementById("mc-perf-deco").textContent = deco !== null ? Math.round(deco) : "—";
+    document.getElementById("mc-perf-att").textContent = att !== null ? Math.round(att) : "—";
+
+    const warnEl = document.getElementById("mc-perf-warning");
+    if(altDensite > 3000 || Math.abs(ventComp) > 15){
+      warnEl.innerHTML = '<p><span class="badge warn">Conditions marquées</span> altitude densité ou composante de vent élevée : la marge d\'erreur de cette estimation empirique augmente, redouble de prudence et vérifie le manuel de vol.</p>';
+    } else {
+      warnEl.innerHTML = "";
+    }
+    notEl.textContent = "Estimation indicative (règles empiriques génériques) — pas un abaque certifié. Masse du jour utilisée : " + masseTot.toFixed(0) + " kg.";
+  }
+  document.getElementById("mc-perf-calc").addEventListener("click", calculerPerfPiste);
 
   /* ---------- Checklists ---------- */
   const clSelect = document.getElementById("cl-select");
